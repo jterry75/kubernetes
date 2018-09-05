@@ -22,10 +22,13 @@ import (
 	"fmt"
 	"net"
 	"time"
+
+	"github.com/Microsoft/go-winio"
 )
 
 const (
-	tcpProtocol = "tcp"
+	tcpProtocol   = "tcp"
+	npipeProtocol = "npipe"
 )
 
 func CreateListener(endpoint string) (net.Listener, error) {
@@ -33,11 +36,14 @@ func CreateListener(endpoint string) (net.Listener, error) {
 	if err != nil {
 		return nil, err
 	}
-	if protocol != tcpProtocol {
-		return nil, fmt.Errorf("only support tcp endpoint")
+	switch protocol {
+	case tcpProtocol:
+		return net.Listen(protocol, addr)
+	case npipeProtocol:
+		return winio.ListenPipe(addr, nil)
+	default:
+		return nil, fmt.Errorf("only support tcp or npipe endpoint")
 	}
-
-	return net.Listen(protocol, addr)
 }
 
 func GetAddressAndDialer(endpoint string) (string, func(addr string, timeout time.Duration) (net.Conn, error), error) {
@@ -45,8 +51,13 @@ func GetAddressAndDialer(endpoint string) (string, func(addr string, timeout tim
 	if err != nil {
 		return "", nil, err
 	}
-	if protocol != tcpProtocol {
-		return "", nil, fmt.Errorf("only support tcp endpoint")
+	switch protocol {
+	case tcpProtocol:
+		return addr, dial, nil
+	case npipeProtocol:
+		return addr, dialPipe, nil
+	default:
+		return "", nil, fmt.Errorf("only support tcp or npipe endpoint")
 	}
 
 	return addr, dial, nil
@@ -54,4 +65,8 @@ func GetAddressAndDialer(endpoint string) (string, func(addr string, timeout tim
 
 func dial(addr string, timeout time.Duration) (net.Conn, error) {
 	return net.DialTimeout(tcpProtocol, addr, timeout)
+}
+
+func dialPipe(addr string, timeout time.Duration) (net.Conn, error) {
+	return winio.DialPipe(addr, &timeout)
 }

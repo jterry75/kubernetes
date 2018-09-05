@@ -40,6 +40,21 @@ func TestParseEndpoint(t *testing.T) {
 			expectedAddr:     "localhost:15880",
 		},
 		{
+			endpoint:         "npipe://./pipe/mypipe",
+			expectedProtocol: "npipe",
+			expectedAddr:     "\\\\.\\pipe\\mypipe",
+		},
+		{
+			endpoint:         "npipe:/pipe/mypipe2",
+			expectedProtocol: "npipe",
+			expectedAddr:     "\\\\.\\pipe\\mypipe2",
+		},
+		{
+			endpoint:         "\\\\.\\pipe\\mypipe3",
+			expectedProtocol: "npipe",
+			expectedAddr:     "\\\\.\\pipe\\mypipe3",
+		},
+		{
 			endpoint:         "tcp1://abc",
 			expectedProtocol: "tcp1",
 			expectError:      true,

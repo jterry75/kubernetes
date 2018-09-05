@@ -19,6 +19,7 @@ package util
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -32,6 +33,10 @@ func FromApiserverCache(opts *metav1.GetOptions) {
 func parseEndpoint(endpoint string) (string, string, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
+		// Check that endpoint wasn't passed in the form \\.\pipe
+		if strings.HasPrefix(endpoint, "\\\\.\\pipe") {
+			return "npipe", endpoint, nil
+		}
 		return "", "", err
 	}
 
@@ -39,6 +44,13 @@ func parseEndpoint(endpoint string) (string, string, error) {
 		return "tcp", u.Host, nil
 	} else if u.Scheme == "unix" {
 		return "unix", u.Path, nil
+	} else if u.Scheme == "npipe" {
+		host := u.Host
+		if host == "" {
+			host = "."
+		}
+		// u.Path will always have a leading / or it will be empty from the Parse.
+		return "npipe", fmt.Sprintf("\\\\%s%s", host, strings.Replace(u.Path, "/", "\\", -1)), nil
 	} else if u.Scheme == "" {
 		return "", "", fmt.Errorf("Using %q as endpoint is deprecated, please consider using full url format", endpoint)
 	} else {
